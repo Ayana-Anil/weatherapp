@@ -92,9 +92,14 @@ app.get('/api/weather', (req, res) => {
 // 2.1 UPDATE
 app.put('/api/weather/:id', (req, res) => {
     const { user_note } = req.body;
+    console.log(`PUT /api/weather/${req.params.id} user_note=`, user_note);
     db.run(`UPDATE weather_queries SET user_note = ? WHERE id = ?`, [user_note, req.params.id], function(err) {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: "Record updated", changes: this.changes });
+        // Return the updated row for confirmation
+        db.get(`SELECT * FROM weather_queries WHERE id = ?`, [req.params.id], (getErr, row) => {
+            if (getErr) return res.status(500).json({ error: getErr.message });
+            res.json({ message: "Record updated", changes: this.changes, row });
+        });
     });
 });
 

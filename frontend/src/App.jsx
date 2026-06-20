@@ -15,6 +15,7 @@ function App() {
   const [editId, setEditId] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [zeusMsg, setZeusMsg] = useState('Im zues, lemme help u with the weather');
 
   // Initialize dates to next 5 days
   useEffect(() => {
@@ -34,6 +35,8 @@ function App() {
       document.body.style.backgroundSize = '';
       document.body.style.backgroundRepeat = '';
       document.body.style.backgroundAttachment = '';
+      // reset zeus message when no forecast
+      setZeusMsg('Im zues, lemme help u with the weather');
       return;
     }
 
@@ -42,13 +45,17 @@ function App() {
     let bgUrl = '';
     if (rain === null || rain === undefined) {
       // No rain data — leave background as CSS default
+      setZeusMsg('Im Zues, lemme tell you about my weather');
       return;
     } else if (rain <= 0.1) {
-      bgUrl = '/backgrounds/sunny.jpeg';   // ← SUNNY image URL
+      bgUrl = '/backgrounds/sunny1.jpg';   // ← SUNNY image URL
+      setZeusMsg('wohoo sun is shining,perfect for picnic but dont forget your sunscreen!');
     } else if (rain <= 7.5) {
-      bgUrl = '/backgrounds/windy.jpeg';   // ← WINDY image URL
+      bgUrl = '/backgrounds/windy1.jpg';   // ← WINDY image URL
+      setZeusMsg('just in case,dont forget your umbrella!');
     } else {
       bgUrl = '/backgrounds/rainy.jpeg';   // ← RAINY image URL
+      setZeusMsg('Im gone make it rain with the darkest clouds');
     }
 
     document.body.style.backgroundImage = `url("${bgUrl}")`;
@@ -75,11 +82,11 @@ function App() {
       return (
         <div style={{marginTop: '12px'}}>
           <div style={{display: 'flex', gap: '12px', alignItems: 'center'}}>
-            <div style={{background: '#fff', padding: '10px 12px', borderRadius: '8px'}}>
+            <div style={{background: 'rgba(255,255,255,0.88)', padding: '10px 12px', borderRadius: '8px'}}>
               <div style={{fontSize: '13px', color: '#6b7280'}}>Avg Temp</div>
               <div style={{fontWeight: 700, fontSize: '16px'}}>{preAvgTemp !== null ? `${Number(preAvgTemp).toFixed(1)}°C` : 'N/A'}</div>
             </div>
-            <div style={{background: '#fff', padding: '10px 12px', borderRadius: '8px'}}>
+            <div style={{background: 'rgba(255,255,255,0.88)', padding: '10px 12px', borderRadius: '8px'}}>
               <div style={{fontSize: '13px', color: '#6b7280'}}>Avg Rain</div>
               <div style={{fontWeight: 700, fontSize: '16px'}}>{preAvgRain !== null ? `${Number(preAvgRain).toFixed(1)} mm` : 'N/A'}</div>
             </div>
@@ -121,11 +128,11 @@ function App() {
     return (
       <div style={{marginTop: '12px'}}>
         <div style={{display: 'flex', gap: '12px', alignItems: 'center'}}>
-          <div style={{background: '#fff', padding: '10px 12px', borderRadius: '8px'}}>
+          <div style={{background: 'rgba(255,255,255,0.88)', padding: '10px 12px', borderRadius: '8px'}}>
             <div style={{fontSize: '13px', color: '#6b7280'}}>Avg Temp</div>
             <div style={{fontWeight: 700, fontSize: '16px'}}>{avgTemp !== null ? `${avgTemp.toFixed(1)}°C` : 'N/A'}</div>
           </div>
-          <div style={{background: '#fff', padding: '10px 12px', borderRadius: '8px'}}>
+          <div style={{background: 'rgba(255,255,255,0.88)', padding: '10px 12px', borderRadius: '8px'}}>
             <div style={{fontSize: '13px', color: '#6b7280'}}>Avg Rain</div>
             <div style={{fontWeight: 700, fontSize: '16px'}}>{avgRain !== null ? `${avgRain.toFixed(1)} mm` : 'N/A'}</div>
           </div>
@@ -319,7 +326,7 @@ function App() {
                 ) : showAll ? (
                   <div style={{display: 'grid', gap: '10px', maxHeight: '60vh', overflowY: 'auto'}}>
                     {history.map((item) => (
-                      <div key={item.id} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', padding: '12px', borderRadius: '8px'}}>
+                      <div key={item.id} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.88)', padding: '12px', borderRadius: '8px'}}>
                         <div>
                           <div style={{fontWeight: 700}}>{item.location}</div>
                           <div style={{color: '#6b7280'}}>{item.start_date} to {item.end_date}</div>
@@ -330,7 +337,7 @@ function App() {
                   </div>
                 ) : (
                   <div>
-                    <div style={{background: '#fff', padding: '12px', borderRadius: '8px'}}>
+                    <div style={{background: 'rgba(255,255,255,0.92)', padding: '12px', borderRadius: '8px'}}>
                       <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                         <div>
                           <div style={{fontSize: '18px', fontWeight: 700}}>{selectedHistory.location}</div>
@@ -352,6 +359,51 @@ function App() {
             </div>
           </div>
         )}
+      </div>
+      {/* zues sticker (bottom-right) */}
+      <div style={{
+        position: 'fixed',
+        bottom: '20px',
+        right: '20px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '6px',
+        zIndex: 1000,
+        pointerEvents: 'none'
+      }}>
+        {/* dialogue bubble above zues */}
+        <div style={{
+          maxWidth: '220px',
+          background: 'rgba(255,255,255,0.92)',
+          color: '#111',
+          padding: '8px 10px',
+          borderRadius: '12px',
+          boxShadow: '0 6px 18px rgba(0,0,0,0.25)',
+          fontSize: '13px',
+          textAlign: 'center',
+          lineHeight: '1.1',
+          transform: 'translateY(-4px)'
+        }}>{zeusMsg}</div>
+
+        <img
+          src="/backgrounds/image.png"
+          alt="zues"
+          style={{
+            width: '120px',
+            height: '120px',
+            objectFit: 'contain',
+            display: 'block'
+          }}
+        />
+        <div style={{
+          fontSize: '13px',
+          color: '#fff',
+          textShadow: '0 1px 3px rgba(0,0,0,0.85)',
+          background: 'rgba(0,0,0,0.25)',
+          padding: '2px 8px',
+          borderRadius: '6px'
+        }}>zues</div>
       </div>
     </div>
   );
