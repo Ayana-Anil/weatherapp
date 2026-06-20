@@ -8,10 +8,15 @@ function App() {
   const [endDate, setEndDate] = useState('');
   const [forecast, setForecast] = useState(null);
   const [history, setHistory] = useState([]);
+  const [selectedHistory, setSelectedHistory] = useState(null);
+  const [showAll, setShowAll] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editNoteValue, setEditNoteValue] = useState('');
+  const [editId, setEditId] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Initialize dates to next 5 days for easy UX
+  // Initialize dates to next 5 days 
   useEffect(() => {
     const today = new Date();
     const future = new Date(today);
@@ -29,6 +34,81 @@ function App() {
     } catch (err) {
       console.error("Failed to load history", err);
     }
+  };
+
+  const renderWeatherPreview = (item) => {
+    // Prefer precomputed averages from DB if available
+    const preAvgTemp = item?.avg_temp ?? item?.avgTemp ?? null;
+    const preAvgRain = item?.avg_rain ?? item?.avgRain ?? null;
+    if (preAvgTemp !== null || preAvgRain !== null) {
+      return (
+        <div style={{marginTop: '12px'}}>
+          <div style={{display: 'flex', gap: '12px', alignItems: 'center'}}>
+            <div style={{background: '#fff', padding: '10px 12px', borderRadius: '8px'}}>
+              <div style={{fontSize: '13px', color: '#6b7280'}}>Avg Temp</div>
+              <div style={{fontWeight: 700, fontSize: '16px'}}>{preAvgTemp !== null ? `${Number(preAvgTemp).toFixed(1)}°C` : 'N/A'}</div>
+            </div>
+            <div style={{background: '#fff', padding: '10px 12px', borderRadius: '8px'}}>
+              <div style={{fontSize: '13px', color: '#6b7280'}}>Avg Rain</div>
+              <div style={{fontWeight: 700, fontSize: '16px'}}>{preAvgRain !== null ? `${Number(preAvgRain).toFixed(1)} mm` : 'N/A'}</div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    let wd = item?.weatherData || item?.weather_data || item?.data;
+    if (typeof wd === 'string') {
+      try {
+        wd = JSON.parse(wd);
+      } catch (e) {
+        wd = null;
+      }
+    }
+    if (!wd || !wd.daily) return null;
+
+    // collect arrays
+    const maxArr = wd.daily.temperature_2m_max || [];
+    const minArr = wd.daily.temperature_2m_min || [];
+    const precipArr = wd.daily.precipitation_sum || [];
+
+    const days = Math.max(maxArr.length, minArr.length, precipArr.length);
+    if (days === 0) return null;
+
+    // compute per-day mean temp where possible, else fallback to available value
+    const temps = [];
+    for (let i = 0; i < days; i++) {
+      const max = typeof maxArr[i] === 'number' ? maxArr[i] : null;
+      const min = typeof minArr[i] === 'number' ? minArr[i] : null;
+      if (max !== null && min !== null) temps.push((max + min) / 2);
+      else if (max !== null) temps.push(max);
+      else if (min !== null) temps.push(min);
+    }
+
+    const rains = [];
+    for (let i = 0; i < days; i++) {
+      const r = typeof precipArr[i] === 'number' ? precipArr[i] : null;
+      if (r !== null) rains.push(r);
+    }
+
+    const avg = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null);
+    const avgTemp = avg(temps);
+    const avgRain = avg(rains);
+
+    return (
+      <div style={{marginTop: '12px'}}>
+        <div style={{display: 'flex', gap: '12px', alignItems: 'center'}}>
+          <div style={{background: '#fff', padding: '10px 12px', borderRadius: '8px'}}>
+            <div style={{fontSize: '13px', color: '#6b7280'}}>Avg Temp</div>
+            <div style={{fontWeight: 700, fontSize: '16px'}}>{avgTemp !== null ? `${avgTemp.toFixed(1)}°C` : 'N/A'}</div>
+          </div>
+          <div style={{background: '#fff', padding: '10px 12px', borderRadius: '8px'}}>
+            <div style={{fontSize: '13px', color: '#6b7280'}}>Avg Rain</div>
+            <div style={{fontWeight: 700, fontSize: '16px'}}>{avgRain !== null ? `${avgRain.toFixed(1)} mm` : 'N/A'}</div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const handleSearch = async (e) => {
@@ -61,23 +141,53 @@ function App() {
     fetchHistory();
   };
 
-  const handleUpdateNote = async (id, currentNote) => {
-    const newNote = prompt("Enter a note for this location:", currentNote || "");
-    if (newNote !== null) {
-      await fetch(`${API_BASE}/weather/${id}`, {
+  const handleView = (item) => {
+    setSelectedHistory(item);
+    setShowAll(false);
+  };
+
+  const handleViewAll = () => {
+    setShowAll((s) => !s);
+    setSelectedHistory(null);
+  };
+
+  const handleUpdateNote = (id, currentNote) => {
+    // Open non-blocking edit modal
+    setEditId(id);
+    setEditNoteValue(currentNote || '');
+    setEditModalOpen(true);
+  };
+
+  const submitUpdateNote = async () => {
+    try {
+      await fetch(`${API_BASE}/weather/${editId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_note: newNote })
+        body: JSON.stringify({ user_note: editNoteValue })
       });
+      setEditModalOpen(false);
+      setEditId(null);
+      setEditNoteValue('');
       fetchHistory();
+    } catch (err) {
+      console.error('Failed to update note', err);
+      setError('Failed to update note');
     }
+  };
+
+  const closeModal = () => {
+    setSelectedHistory(null);
+    setShowAll(false);
+    setEditModalOpen(false);
+    setEditId(null);
+    setEditNoteValue('');
   };
 
   return (
     <div className="container">
-      <h1>🌍 Weather API Explorer</h1>
+      <h1> Weather Forcast </h1>
       
-      {error && <div className="error">⚠️ {error}</div>}
+      {error && <div className="error"> {error}</div>}
 
       <form onSubmit={handleSearch}>
         <input 
@@ -125,9 +235,14 @@ function App() {
       <div className="history-section">
         <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
           <h2>Search History (Database)</h2>
-          <div className="export-links">
-            <a href={`${API_BASE}/export/json`} target="_blank">📥 Export JSON</a>
-            <a href={`${API_BASE}/export/csv`} target="_blank">📥 Export CSV</a>
+          <div style={{display: 'flex', gap: '12px', alignItems: 'center'}}>
+            <div className="export-links">
+              <a href={`${API_BASE}/export/json`} target="_blank">📥 Export JSON</a>
+              <a href={`${API_BASE}/export/csv`} target="_blank">📥 Export CSV</a>
+            </div>
+            <button onClick={handleViewAll} style={{background: '#2563eb', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '6px'}}>
+              {showAll ? 'Hide Full History' : 'View Full History'}
+            </button>
           </div>
         </div>
 
@@ -147,6 +262,7 @@ function App() {
                 <td>{item.start_date} to {item.end_date}</td>
                 <td>{item.user_note || <em style={{color: '#9ca3af'}}>None</em>}</td>
                 <td>
+                  <button onClick={() => handleView(item)} style={{marginRight: '8px'}}>View</button>
                   <button onClick={() => handleUpdateNote(item.id, item.user_note)} style={{marginRight: '8px'}}>Edit Note</button>
                   <button className="danger" onClick={() => handleDelete(item.id)}>Delete</button>
                 </td>
@@ -157,6 +273,61 @@ function App() {
             )}
           </tbody>
         </table>
+        {/* Modal overlay for viewing or editing (friendly views) */}
+        {(selectedHistory || showAll || editModalOpen) && (
+          <div style={{position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999}}>
+            <div style={{width: '90%', maxWidth: '900px', background: '#e6eef6', padding: '18px', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.2)'}}>
+              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                <h3 style={{margin: 0}}>{editModalOpen ? 'Edit Note' : (showAll ? 'Full History' : `Details — ${selectedHistory?.location}`)}</h3>
+                <button onClick={closeModal} style={{background: '#ef4444', color: '#fff', border: 'none', padding: '6px 10px', borderRadius: '6px'}}>Close</button>
+              </div>
+
+              <div style={{marginTop: '12px'}}>
+                {editModalOpen ? (
+                  <div>
+                    <label style={{display: 'block', marginBottom: '8px'}}>Note</label>
+                    <textarea value={editNoteValue} onChange={(e) => setEditNoteValue(e.target.value)} rows={4} style={{width: '100%', padding: '8px', borderRadius: '6px'}} />
+                    <div style={{marginTop: '8px', display: 'flex', gap: '8px'}}>
+                      <button onClick={submitUpdateNote} style={{background: '#10b981', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '6px'}}>Save</button>
+                      <button onClick={closeModal} style={{background: '#9ca3af', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '6px'}}>Cancel</button>
+                    </div>
+                  </div>
+                ) : showAll ? (
+                  <div style={{display: 'grid', gap: '10px', maxHeight: '60vh', overflowY: 'auto'}}>
+                    {history.map((item) => (
+                      <div key={item.id} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', padding: '12px', borderRadius: '8px'}}>
+                        <div>
+                          <div style={{fontWeight: 700}}>{item.location}</div>
+                          <div style={{color: '#6b7280'}}>{item.start_date} to {item.end_date}</div>
+                          <div style={{marginTop: '6px'}}><strong>Note:</strong> {item.user_note || <em style={{color: '#9ca3af'}}>None</em>}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{background: '#fff', padding: '12px', borderRadius: '8px'}}>
+                      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                        <div>
+                          <div style={{fontSize: '18px', fontWeight: 700}}>{selectedHistory.location}</div>
+                          <div style={{color: '#6b7280'}}>{selectedHistory.start_date} to {selectedHistory.end_date}</div>
+                        </div>
+                        <div style={{display: 'flex', gap: '8px'}}>
+                          <button onClick={() => { setEditId(selectedHistory.id); setEditNoteValue(selectedHistory.user_note || ''); setEditModalOpen(true); }} style={{background: '#3b82f6', color: '#fff', border: 'none', padding: '8px 10px', borderRadius: '6px'}}>Edit Note</button>
+                          <button className="danger" onClick={() => { handleDelete(selectedHistory.id); closeModal(); }} style={{background: '#ef4444', color: '#fff', border: 'none', padding: '8px 10px', borderRadius: '6px'}}>Delete</button>
+                        </div>
+                      </div>
+                      <div style={{marginTop: '10px'}}>
+                        <strong>My Note:</strong> {selectedHistory.user_note || <em style={{color: '#9ca3af'}}>None</em>}
+                      </div>
+                      {renderWeatherPreview(selectedHistory)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const db = require('./database');
+// node-fetch v2 for CommonJS environments (Node < 18)
+const fetch = require('node-fetch');
 const app = express();
 
 app.use(cors());
@@ -37,11 +39,40 @@ app.post('/api/weather', async (req, res) => {
 
         if (weatherData.error) throw new Error("Error fetching weather data for those dates.");
 
-        // Store in DB
-        const stmt = db.prepare(`INSERT INTO weather_queries (location, start_date, end_date, weather_data, user_note) VALUES (?, ?, ?, ?, ?)`);
-        stmt.run([geo.name, startDate, endDate, JSON.stringify(weatherData), ""], function(err) {
+        // compute averages from weatherData if available
+        let avgTemp = null;
+        let avgRain = null;
+        try {
+            const daily = weatherData.daily || {};
+            const maxArr = daily.temperature_2m_max || [];
+            const minArr = daily.temperature_2m_min || [];
+            const precipArr = daily.precipitation_sum || [];
+            const days = Math.max(maxArr.length, minArr.length, precipArr.length);
+            const temps = [];
+            for (let i = 0; i < days; i++) {
+                const max = typeof maxArr[i] === 'number' ? maxArr[i] : null;
+                const min = typeof minArr[i] === 'number' ? minArr[i] : null;
+                if (max !== null && min !== null) temps.push((max + min) / 2);
+                else if (max !== null) temps.push(max);
+                else if (min !== null) temps.push(min);
+            }
+            const rains = [];
+            for (let i = 0; i < days; i++) {
+                const r = typeof precipArr[i] === 'number' ? precipArr[i] : null;
+                if (r !== null) rains.push(r);
+            }
+            const avg = (arr) => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
+            avgTemp = avg(temps);
+            avgRain = avg(rains);
+        } catch (e) {
+            // ignore and leave averages null
+        }
+
+        // Store in DB (include averages)
+        const stmt = db.prepare(`INSERT INTO weather_queries (location, start_date, end_date, weather_data, avg_temp, avg_rain, user_note) VALUES (?, ?, ?, ?, ?, ?, ?)`);
+        stmt.run([geo.name, startDate, endDate, JSON.stringify(weatherData), avgTemp, avgRain, ""], function(err) {
             if (err) return res.status(500).json({ error: "Database error" });
-            res.status(201).json({ id: this.lastID, location: geo.name, weatherData });
+            res.status(201).json({ id: this.lastID, location: geo.name, weatherData, avg_temp: avgTemp, avg_rain: avgRain });
         });
         stmt.finalize();
 
@@ -78,7 +109,7 @@ app.delete('/api/weather/:id', (req, res) => {
 // 2.3 DATA EXPORT (JSON & CSV)
 app.get('/api/export/:format', (req, res) => {
     const format = req.params.format;
-    db.all(`SELECT id, location, start_date, end_date, user_note, created_at FROM weather_queries`, [], (err, rows) => {
+    db.all(`SELECT id, location, start_date, end_date, avg_temp, avg_rain, user_note, created_at FROM weather_queries`, [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         
         if (format === 'json') {
@@ -86,8 +117,8 @@ app.get('/api/export/:format', (req, res) => {
             res.attachment("weather_export.json");
             return res.send(JSON.stringify(rows, null, 2));
         } else if (format === 'csv') {
-            const csvRows = ['ID,Location,Start Date,End Date,Note,Created At'];
-            rows.forEach(r => csvRows.push(`${r.id},"${r.location}",${r.start_date},${r.end_date},"${r.user_note || ''}",${r.created_at}`));
+            const csvRows = ['ID,Location,Start Date,End Date,Avg Temp (C),Avg Rain (mm),Note,Created At'];
+            rows.forEach(r => csvRows.push(`${r.id},"${r.location}",${r.start_date},${r.end_date},${r.avg_temp !== null ? r.avg_temp : ''},${r.avg_rain !== null ? r.avg_rain : ''},"${r.user_note || ''}",${r.created_at}`));
             res.header("Content-Type", "text/csv");
             res.attachment("weather_export.csv");
             return res.send(csvRows.join('\n'));
