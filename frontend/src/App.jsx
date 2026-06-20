@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000/api';
 
 function App() {
   const [location, setLocation] = useState('');
@@ -17,7 +17,6 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [zeusMsg, setZeusMsg] = useState('Im zues, lemme help u with the weather');
 
-  // Initialize dates to next 5 days
   useEffect(() => {
     const today = new Date();
     const future = new Date(today);
@@ -27,7 +26,6 @@ function App() {
     fetchHistory();
   }, []);
 
-  // ── DYNAMIC BACKGROUND based on avg rainfall ──────────────────────────────
   useEffect(() => {
     if (!forecast) {
       // Reset to default CSS background when no forecast is loaded
@@ -35,7 +33,7 @@ function App() {
       document.body.style.backgroundSize = '';
       document.body.style.backgroundRepeat = '';
       document.body.style.backgroundAttachment = '';
-      // reset zeus message when no forecast
+    
       setZeusMsg('Im zues, lemme help u with the weather');
       return;
     }
@@ -44,17 +42,17 @@ function App() {
 
     let bgUrl = '';
     if (rain === null || rain === undefined) {
-      // No rain data — leave background as CSS default
+    
       setZeusMsg('Im Zues, lemme tell you about my weather');
       return;
     } else if (rain <= 0.1) {
-      bgUrl = '/backgrounds/sunny1.jpg';   // ← SUNNY image URL
+      bgUrl = '/backgrounds/sunny1.jpg';  
       setZeusMsg('wohoo sun is shining,perfect for picnic but dont forget your sunscreen!');
     } else if (rain <= 7.5) {
-      bgUrl = '/backgrounds/windy1.jpg';   // ← WINDY image URL
+      bgUrl = '/backgrounds/windy1.jpg';  
       setZeusMsg('just in case,dont forget your umbrella!');
     } else {
-      bgUrl = '/backgrounds/rainy.jpeg';   // ← RAINY image URL
+      bgUrl = '/backgrounds/rainy.jpeg';   
       setZeusMsg('Im gone make it rain with the darkest clouds');
     }
 
@@ -63,7 +61,6 @@ function App() {
     document.body.style.backgroundRepeat = 'no-repeat';
     document.body.style.backgroundAttachment = 'fixed';
   }, [forecast]);
-  // ─────────────────────────────────────────────────────────────────────────
 
   const fetchHistory = async () => {
     try {
@@ -157,7 +154,6 @@ function App() {
 
       if (!res.ok) throw new Error(data.error);
 
-      // Store avgRain alongside forecast so the background effect can use it
       setForecast({ name: data.location, data: data.weatherData, avgRain: data.avg_rain });
       fetchHistory();
     } catch (err) {
@@ -372,7 +368,6 @@ function App() {
         zIndex: 1000,
         pointerEvents: 'none'
       }}>
-        {/* dialogue bubble above zues */}
         <div style={{
           maxWidth: '220px',
           background: 'rgba(255,255,255,0.92)',
