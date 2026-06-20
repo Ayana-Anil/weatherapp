@@ -1,15 +1,37 @@
-# AI Engineer Intern - Full Stack Weather App
+# Weather Forecast App(PM Accelerator Assessment)
+# Ayana Anil
+A full-stack weather forecast app that fetches real-time weather data, stores search history, and displays dynamic backgrounds based on rainfall.
 
-**Assessment Completed**: Full Stack / Dual Role (Tech Assessment #1 & #2)
+## Features
+- Search weather by location and date range
+- Displays daily high/low temperature and precipitation
+- Dynamic background changes based on average rainfall 
+- Search history saved to a local SQLite database
+- Edit notes on past searches
+- Export history as JSON or CSV
 
-This application allows users to search for the weather in a specific location within a date range, fetches real-time data from external APIs, stores the queries in a SQLite database, and allows for full CRUD operations and data exports.
+## Tech Stack
+- **Frontend:** React, Vite
+- **Backend:** Node.js, Express
+- **Database:** SQLite
+- **Weather API:** Open-Meteo (free, no API key needed)
 
-## Prerequisites
-- Node.js (v16 or higher)
-- npm or yarn
+## Running Locally
 
-## Features Implemented
-- **Frontend:** Responsive React UI, Error Handling, 5-Day Forecast display.
-- **Backend (CRUD):** SQLite DB. Validates input, CREATES records, READS history, UPDATES user notes, DELETES records.
-- **API Integration:** Open-Meteo Geocoding and Forecast APIs.
-- **Data Export:** Endpoints to export the database to JSON or CSV.
+**Backend:**
+bash
+cd backend
+npm install
+node server.js
++
+
+**Frontend:**
+bash
+cd frontend
+npm install
+npm run dev
+
+
+## Deployment
+- Frontend hosted on Railway
+- Backend hosted on Railway
