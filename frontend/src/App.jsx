@@ -16,7 +16,7 @@ function App() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Initialize dates to next 5 days 
+  // Initialize dates to next 5 days
   useEffect(() => {
     const today = new Date();
     const future = new Date(today);
@@ -25,6 +25,38 @@ function App() {
     setEndDate(future.toISOString().split('T')[0]);
     fetchHistory();
   }, []);
+
+  // ── DYNAMIC BACKGROUND based on avg rainfall ──────────────────────────────
+  useEffect(() => {
+    if (!forecast) {
+      // Reset to default CSS background when no forecast is loaded
+      document.body.style.backgroundImage = '';
+      document.body.style.backgroundSize = '';
+      document.body.style.backgroundRepeat = '';
+      document.body.style.backgroundAttachment = '';
+      return;
+    }
+
+    const rain = forecast.avgRain;
+
+    let bgUrl = '';
+    if (rain === null || rain === undefined) {
+      // No rain data — leave background as CSS default
+      return;
+    } else if (rain <= 0.1) {
+      bgUrl = '/backgrounds/sunny.jpeg';   // ← SUNNY image URL
+    } else if (rain <= 7.5) {
+      bgUrl = '/backgrounds/windy.jpeg';   // ← WINDY image URL
+    } else {
+      bgUrl = '/backgrounds/rainy.jpeg';   // ← RAINY image URL
+    }
+
+    document.body.style.backgroundImage = `url("${bgUrl}")`;
+    document.body.style.backgroundSize = 'cover';
+    document.body.style.backgroundRepeat = 'no-repeat';
+    document.body.style.backgroundAttachment = 'fixed';
+  }, [forecast]);
+  // ─────────────────────────────────────────────────────────────────────────
 
   const fetchHistory = async () => {
     try {
@@ -37,7 +69,6 @@ function App() {
   };
 
   const renderWeatherPreview = (item) => {
-    // Prefer precomputed averages from DB if available
     const preAvgTemp = item?.avg_temp ?? item?.avgTemp ?? null;
     const preAvgRain = item?.avg_rain ?? item?.avgRain ?? null;
     if (preAvgTemp !== null || preAvgRain !== null) {
@@ -59,23 +90,16 @@ function App() {
 
     let wd = item?.weatherData || item?.weather_data || item?.data;
     if (typeof wd === 'string') {
-      try {
-        wd = JSON.parse(wd);
-      } catch (e) {
-        wd = null;
-      }
+      try { wd = JSON.parse(wd); } catch (e) { wd = null; }
     }
     if (!wd || !wd.daily) return null;
 
-    // collect arrays
     const maxArr = wd.daily.temperature_2m_max || [];
     const minArr = wd.daily.temperature_2m_min || [];
     const precipArr = wd.daily.precipitation_sum || [];
-
     const days = Math.max(maxArr.length, minArr.length, precipArr.length);
     if (days === 0) return null;
 
-    // compute per-day mean temp where possible, else fallback to available value
     const temps = [];
     for (let i = 0; i < days; i++) {
       const max = typeof maxArr[i] === 'number' ? maxArr[i] : null;
@@ -84,7 +108,6 @@ function App() {
       else if (max !== null) temps.push(max);
       else if (min !== null) temps.push(min);
     }
-
     const rains = [];
     for (let i = 0; i < days; i++) {
       const r = typeof precipArr[i] === 'number' ? precipArr[i] : null;
@@ -127,8 +150,9 @@ function App() {
 
       if (!res.ok) throw new Error(data.error);
 
-      setForecast({ name: data.location, data: data.weatherData });
-      fetchHistory(); // Refresh history table
+      // Store avgRain alongside forecast so the background effect can use it
+      setForecast({ name: data.location, data: data.weatherData, avgRain: data.avg_rain });
+      fetchHistory();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -152,7 +176,6 @@ function App() {
   };
 
   const handleUpdateNote = (id, currentNote) => {
-    // Open non-blocking edit modal
     setEditId(id);
     setEditNoteValue(currentNote || '');
     setEditModalOpen(true);
@@ -185,36 +208,36 @@ function App() {
 
   return (
     <div className="container">
-      <h1> Weather Forcast </h1>
-      
-      {error && <div className="error"> {error}</div>}
+      <h1>Weather Forecast</h1>
+
+      {error && <div className="error">{error}</div>}
 
       <form onSubmit={handleSearch}>
-        <input 
-          type="text" 
-          placeholder="Enter Location (e.g., Paris, 90210)" 
-          value={location} 
-          onChange={(e) => setLocation(e.target.value)} 
-          required 
+        <input
+          type="text"
+          placeholder="Enter Location (e.g., Paris, 90210)"
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+          required
         />
-        <input 
-          type="date" 
-          value={startDate} 
-          onChange={(e) => setStartDate(e.target.value)} 
-          required 
+        <input
+          type="date"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+          required
         />
-        <input 
-          type="date" 
-          value={endDate} 
-          onChange={(e) => setEndDate(e.target.value)} 
-          required 
+        <input
+          type="date"
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)}
+          required
         />
         <button type="submit" disabled={loading}>
           {loading ? 'Searching...' : 'Get Weather'}
         </button>
       </form>
 
-      {/* FORECAST VIEW (1.1) */}
+      {/* FORECAST VIEW */}
       {forecast && (
         <div>
           <h2>Forecast for {forecast.name}</h2>
@@ -231,7 +254,7 @@ function App() {
         </div>
       )}
 
-      {/* DATABASE CRUD & EXPORT (2.1 & 2.3) */}
+      {/* DATABASE CRUD & EXPORT */}
       <div className="history-section">
         <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
           <h2>Search History (Database)</h2>
@@ -273,7 +296,8 @@ function App() {
             )}
           </tbody>
         </table>
-        {/* Modal overlay for viewing or editing (friendly views) */}
+
+        {/* Modal overlay */}
         {(selectedHistory || showAll || editModalOpen) && (
           <div style={{position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999}}>
             <div style={{width: '90%', maxWidth: '900px', background: '#e6eef6', padding: '18px', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.2)'}}>
