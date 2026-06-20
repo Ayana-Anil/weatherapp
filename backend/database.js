@@ -8,7 +8,6 @@ const db = new sqlite3.Database(dbPath, (err) => {
         console.error('Error opening database:', err.message);
     } else {
         console.log('Connected to the SQLite database.');
-        // Create table if it doesn't exist, then ensure required columns exist
         db.serialize(() => {
             db.run(`CREATE TABLE IF NOT EXISTS weather_queries (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -19,7 +18,6 @@ const db = new sqlite3.Database(dbPath, (err) => {
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )`);
 
-            // Check table columns and add missing ones (safe migration)
             db.all("PRAGMA table_info(weather_queries)", [], (pragmaErr, cols) => {
                 if (pragmaErr) return console.error('Failed to read table info:', pragmaErr.message);
                 const names = (cols || []).map(c => c.name);
