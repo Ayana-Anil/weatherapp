@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# SQLite database
+*.sqlite
+*.db
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Vite build output
+frontend/dist/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
