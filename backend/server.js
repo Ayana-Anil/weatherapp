@@ -30,10 +30,13 @@ app.post('/api/weather', async (req, res) => {
         const geo = await getCoordinates(location);
         
         const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${geo.lat}&longitude=${geo.lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&start_date=${startDate}&end_date=${endDate}&timezone=auto`;
-        const weatherRes = await fetch(weatherUrl);
-        const weatherData = await weatherRes.json();
+       
+       const weatherRes = await fetch(weatherUrl);
+       const weatherData = await weatherRes.json();
 
-        if (weatherData.error) throw new Error("Error fetching weather data for those dates.");
+       console.log('Weather API response:', JSON.stringify(weatherData)); 
+
+       if (weatherData.error) throw new Error("Error fetching weather data for those dates.");
 
         let avgTemp = null;
         let avgRain = null;
