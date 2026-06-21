@@ -230,11 +230,17 @@ function App() {
           required
         />
         <input
-          type="date"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          required
-        />
+  type="date"
+  value={endDate}
+  min={startDate}
+  max={(() => {
+    const d = new Date(startDate);
+    d.setDate(d.getDate() + 7);
+    return d.toISOString().split('T')[0];
+  })()}
+  onChange={(e) => setEndDate(e.target.value)}
+  required
+/>
         <button type="submit" disabled={loading}>
           {loading ? 'Searching...' : 'Get Weather'}
         </button>
@@ -245,7 +251,7 @@ function App() {
         <div>
           <h2>Forecast for {forecast.name}</h2>
           <div className="forecast-grid">
-{(forecast.data?.forecast?.forecastday || []).map((day) => (
+{(forecast.data?.forecast?.forecastday || []).filter(day => day.date >= startDate && day.date <= endDate).map((day) => (
   <div key={day.date} className="forecast-card">
     <strong>{day.date}</strong>
     <p>High: {day.day.maxtemp_c}°C</p>
