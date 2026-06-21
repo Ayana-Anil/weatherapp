@@ -229,15 +229,15 @@ function App() {
           onChange={(e) => setStartDate(e.target.value)}
           required
         />
-        <input
+<input
   type="date"
   value={endDate}
   min={startDate}
-  max={(() => {
+  max={startDate ? (() => {
     const d = new Date(startDate);
     d.setDate(d.getDate() + 7);
     return d.toISOString().split('T')[0];
-  })()}
+  })() : ''}
   onChange={(e) => setEndDate(e.target.value)}
   required
 />
