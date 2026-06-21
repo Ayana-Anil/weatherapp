@@ -245,14 +245,14 @@ function App() {
         <div>
           <h2>Forecast for {forecast.name}</h2>
           <div className="forecast-grid">
-            {forecast.data.daily.time.map((date, idx) => (
-              <div key={date} className="forecast-card">
-                <strong>{date}</strong>
-                <p>High: {forecast.data.daily.temperature_2m_max[idx]}°C</p>
-                <p>Low: {forecast.data.daily.temperature_2m_min[idx]}°C</p>
-                <p>Precip: {forecast.data.daily.precipitation_sum[idx]} mm</p>
-              </div>
-            ))}
+{(forecast.data?.forecast?.forecastday || []).map((day) => (
+  <div key={day.date} className="forecast-card">
+    <strong>{day.date}</strong>
+    <p>High: {day.day.maxtemp_c}°C</p>
+    <p>Low: {day.day.mintemp_c}°C</p>
+    <p>Precip: {day.day.totalprecip_mm} mm</p>
+  </div>
+))}
           </div>
         </div>
       )}

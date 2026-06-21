@@ -14,7 +14,7 @@ A full-stack weather forecast app that fetches real-time weather data, stores se
 - **Frontend:** React, Vite
 - **Backend:** Node.js, Express
 - **Database:** SQLite
-- **Weather API:** Open-Meteo (free, no API key needed)
+- **Weather API:** weatherapi.com (using key)
 
 ## Running Locally
 
@@ -33,5 +33,5 @@ npm run dev
 
 
 ## Deployment
-- Frontend hosted on Railway
-- Backend hosted on Railway
+- Frontend hosted on Vercel
+- Backend hosted on Render

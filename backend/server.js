@@ -10,11 +10,11 @@ app.use(express.json());
 const PORT = process.env.PORT || 5000;
 
 async function getCoordinates(location) {
-    const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1`;
-    const response = await fetch(geoUrl);
-    const data = await response.json();
-    if (!data.results || data.results.length === 0) throw new Error("Location not found");
-    return { lat: data.results[0].latitude, lon: data.results[0].longitude, name: data.results[0].name };
+const geoUrl = `https://api.weatherapi.com/v1/search.json?key=${process.env.WEATHERAPI_KEY}&q=${encodeURIComponent(location)}`;
+const response = await fetch(geoUrl);
+const data = await response.json();
+if (!data || data.length === 0) throw new Error("Location not found");
+return { lat: data[0].lat, lon: data[0].lon, name: data[0].name };
 }
 
 app.post('/api/weather', async (req, res) => {
@@ -29,22 +29,20 @@ app.post('/api/weather', async (req, res) => {
     
         const geo = await getCoordinates(location);
         
-        const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${geo.lat}&longitude=${geo.lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&start_date=${startDate}&end_date=${endDate}&timezone=auto`;
-       
-       const weatherRes = await fetch(weatherUrl);
-       const weatherData = await weatherRes.json();
-
-       console.log('Weather API response:', JSON.stringify(weatherData)); 
-
-       if (weatherData.error) throw new Error("Error fetching weather data for those dates.");
+    
+const weatherUrl = `https://api.weatherapi.com/v1/forecast.json?key=${process.env.WEATHERAPI_KEY}&q=${geo.lat},${geo.lon}&days=7`;
+const weatherRes = await fetch(weatherUrl);
+const weatherData = await weatherRes.json();
+console.log('WeatherAPI response:', JSON.stringify(weatherData).slice(0, 500));
+if (weatherData.error) throw new Error("Error fetching weather data for those dates.");
 
         let avgTemp = null;
         let avgRain = null;
         try {
-            const daily = weatherData.daily || {};
-            const maxArr = daily.temperature_2m_max || [];
-            const minArr = daily.temperature_2m_min || [];
-            const precipArr = daily.precipitation_sum || [];
+const daily = weatherData.forecast?.forecastday || [];
+const maxArr = daily.map(d => d.day.maxtemp_c);
+const minArr = daily.map(d => d.day.mintemp_c);
+const precipArr = daily.map(d => d.day.totalprecip_mm);
             const days = Math.max(maxArr.length, minArr.length, precipArr.length);
             const temps = [];
             for (let i = 0; i < days; i++) {
